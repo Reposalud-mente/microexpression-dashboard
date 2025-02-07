@@ -5,7 +5,12 @@ import * as d3 from "d3"
 import { format } from "date-fns"
 
 interface Props {
-  data: any[]
+  data: {
+    date: Date
+    emotions: {
+      [key: string]: number
+    }
+  }[]
   focusExpression: string
 }
 
@@ -27,13 +32,31 @@ const MicroexpressionLineChart = ({ data, focusExpression }: Props) => {
 
     const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`)
 
-    // Improved X axis with better date formatting
     const x = d3
       .scaleTime()
       .domain(d3.extent(data, (d) => new Date(d.date)) as [Date, Date])
       .range([0, width])
 
     const y = d3.scaleLinear().domain([0, 100]).range([height, 0])
+
+    // Create line generator with correct emotion data access
+    const line = d3
+      .line<any>()
+      .x((d) => x(new Date(d.date)))
+      .y((d, i) => y(d.emotions[focusExpression] || 0))
+
+    // Draw lines for each emotion or just focused emotion
+    microexpressions.forEach((emotion, i) => {
+      if (!focusExpression || focusExpression === emotion) {
+        g.append("path")
+          .datum(data)
+          .attr("fill", "none")
+          .attr("stroke", colors[i])
+          .attr("stroke-width", focusExpression === emotion ? 3 : 1.5)
+          .attr("stroke-opacity", focusExpression ? (focusExpression === emotion ? 1 : 0.2) : 0.8)
+          .attr("d", line)
+      }
+    })
 
     // Format X axis with less compressed dates
     g.append("g")
@@ -89,55 +112,35 @@ const MicroexpressionLineChart = ({ data, focusExpression }: Props) => {
     // Ensure x-grid lines are behind data too
     g.selectAll(".grid-lines-x").lower()
 
-    const line = d3
-      .line<any>()
-      .x((d) => x(new Date(d.date)))
-      .y((d) => y(d.value))
-      .curve(d3.curveMonotoneX) // Smoother curves
-
-    const expressionsToShow = focusExpression ? [focusExpression] : microexpressions
-
     // Add legend
     const legend = g
       .append("g")
       .attr("class", "legend")
       .attr("transform", `translate(${width + 10}, 0)`)
 
-    expressionsToShow.forEach((me, i) => {
-      const meData = data.map((d) => ({ date: d.date, value: d[me] }))
-      const color = colors[microexpressions.indexOf(me)]
+    microexpressions.forEach((emotion, i) => {
+      if (!focusExpression || focusExpression === emotion) {
+        // Add legend items instead of end-of-line labels
+        legend
+          .append("rect")
+          .attr("y", i * 20)
+          .attr("width", 12)
+          .attr("height", 12)
+          .attr("fill", colors[i])
 
-      g.append("path")
-        .datum(meData)
-        .attr("fill", "none")
-        .attr("stroke", color)
-        .attr("stroke-width", 2)
-        .attr("d", line)
-        .style("opacity", 0)
-        .transition()
-        .duration(750)
-        .style("opacity", 1)
-
-      // Add legend items instead of end-of-line labels
-      legend
-        .append("rect")
-        .attr("y", i * 20)
-        .attr("width", 12)
-        .attr("height", 12)
-        .attr("fill", color)
-
-      legend
-        .append("text")
-        .attr("x", 20)
-        .attr("y", i * 20 + 10)
-        .text(me)
-        .style("font-size", "12px")
-        .attr("alignment-baseline", "middle")
+        legend
+          .append("text")
+          .attr("x", 20)
+          .attr("y", i * 20 + 10)
+          .text(emotion)
+          .style("font-size", "12px")
+          .attr("alignment-baseline", "middle")
+      }
     })
 
     const legendItem = legend
       .selectAll(".legend-item")
-      .data(expressionsToShow)
+      .data(microexpressions)
       .enter()
       .append("g")
       .attr("class", "legend-item")
@@ -205,8 +208,8 @@ const MicroexpressionLineChart = ({ data, focusExpression }: Props) => {
         tooltip
           .style("visibility", "visible")
           .html(
-            `<strong>${format(new Date(d.date), "MMMM d, yyyy")}</strong><br/>${expressionsToShow
-              .map((me) => `${me}: ${d[me].toFixed(2)}%`)
+            `<strong>${format(new Date(d.date), "MMMM d, yyyy")}</strong><br/>${microexpressions
+              .map((emotion) => `${emotion}: ${d.emotions[emotion]?.toFixed(2) || 0}%`)
               .join("<br/>")}`
           )
           .style("transform", `translate(${event.pageX + 10}px,${event.pageY - 10}px)`)

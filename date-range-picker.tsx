@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
+import { es } from 'date-fns/locale'
 
 interface Props {
   className?: string
@@ -32,7 +33,7 @@ const DatePickerWithRange = ({ className, date, setDate }: Props) => {
             id="date"
             variant={"outline"}
             className={cn(
-              "w-[300px] justify-start text-left font-normal bg-white border-gray-200 hover:bg-gray-50",
+              "w-[280px] justify-start text-left font-normal bg-white border-gray-200 hover:bg-gray-50",
               !date && "text-muted-foreground"
             )}
           >
@@ -40,13 +41,13 @@ const DatePickerWithRange = ({ className, date, setDate }: Props) => {
             {date?.from ? (
               date.to ? (
                 <>
-                  Week of {format(date.from, "MMM d")} - Week of {format(date.to, "MMM d, yyyy")}
+                  {format(date.from, "d LLL", { locale: es })} - {format(date.to, "d LLL", { locale: es })}
                 </>
               ) : (
-                `Week of ${format(date.from, "MMMM d, yyyy")}`
+                format(date.from, "d LLL", { locale: es })
               )
             ) : (
-              <span>Select week range</span>
+              <span>Seleccionar fecha</span>
             )}
           </Button>
         </PopoverTrigger>
@@ -61,6 +62,7 @@ const DatePickerWithRange = ({ className, date, setDate }: Props) => {
             selected={date}
             onSelect={handleSelect}
             numberOfMonths={2}
+            locale={es}
             className="p-3"
             classNames={{
               months: "flex space-x-4",
